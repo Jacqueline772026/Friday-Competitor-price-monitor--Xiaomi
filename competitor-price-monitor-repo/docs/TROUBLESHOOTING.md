@@ -1,0 +1,13 @@
+# Troubleshooting / 常见问题
+- **结果被旧 Excel 覆盖/消失**：Excel 里还开着旧的 `competitor_log.xlsx`，关闭时保存会覆盖脚本结果。运行前后都关闭并选"不保存"；脚本发现 `~$competitor_log.xlsx` 会拒绝运行。
+- **连不上 Chrome (9222)**：专用 Chrome 被关了。运行 `start_chrome.*` 后用 `resume.*` 续跑；运行期间不要关它。
+- **一开始整批读取超时**：专用 Chrome 刚启动，或系统正在弹出密码/授权窗口等你输入。处理后用 `resume` 续跑。
+- **`ERR_HTTP2_PROTOCOL_ERROR` / `读取失败`**：网络抖动，已自动重试一次；剩下的用 `resume` 补。
+- **`待续`**：到了每个网站的页数上限或被拦截，属于保护机制。过 2–3 小时用 `resume`，不要连续重试。
+- **EURO 的 `unavailable online`**：页面写"Brak możliwości dostawy / dostępny tylko w wybranych sklepach"，只有门店能买。注意页面里的 `deliveryAvailability` 可能写 `FOR_TOMORROW` 但页面实际不可网购，以结构化数据里的 `InStoreOnly` 为准。
+- **价格是 0 / `discontinued`**：EURO/OleOle 页面写"Produkt nie jest już dostępny w naszym sklepie"，且结构化价格为 0。**不能只看这句话**：它在每个页面的模板里都有，必须同时价格为 0/空才算下架。
+- **EURO 显示"无价格 / 页面无价格数据"**：多半是被拦截(页面标题 "RTV Euro AGD - Lock"/"Blokada")，不是没货。
+- **`链接商品与表不符 ...；已重新搜索，该渠道没有这个内存/型号`**：多半是竞品表里的型号/内存写错了（例如把 6+128 写成 8+128、把 8/512 写成 12+512）。请到网站上确认真实配置后更正表格。
+- **Media Expert 搜到的全是配件**：Media Expert 没有这款手机，写"搜索结果里没有找到"是对的。Media Expert 搜索页没有结构化列表，程序从商品链接里还原名称。
+- **竞品表里有些单元格是 `0`、`EURO`、`MEDIA EXPERT` 之类的占位文字**：不是链接，会被忽略。
+- **Windows**：使用 `.bat`；若 `py` 找不到，安装 Python 并勾选 "Add to PATH"。
