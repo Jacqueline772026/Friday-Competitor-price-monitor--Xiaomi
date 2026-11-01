@@ -9,7 +9,7 @@ This is a standalone project.
 ## 1. 它做什么
 - 读你的**竞品表**（`competitor_table.xlsm` 或 `.xlsx`）：品牌 / 型号 / 内存 / RRP / 各网站商品链接。**只读，不会修改你的表**（xlsm 里的宏不受影响）。
 - 每个款式查 EURO、OleOle、Media Expert 的当前价格和库存。
-- 结果写入 **`competitor_log.xlsx`**：左边是品牌/型号/内存/RRP/链接，右边**每周追加一组带日期的四列**：`EURO 2026.10.30`、`OleOle 2026.10.30`、`MEX 2026.10.30`、`对比RRP 2026.10.30`。
+- 结果写入 **`competitor_log.xlsx`**：左边是品牌/型号/内存/RRP/链接，右边**每周追加一组带日期的四列**：`EURO 2026.10.30`、`OleOle 2026.10.30`、`MEX 2026.10.30`、`对比RRP 2026.10.30`、`汇总(复制用) 2026.10.30`。
 
 | 单元格 | 含义 |
 |---|---|
@@ -22,6 +22,8 @@ This is a standalone project.
 | `链接商品与表不符: ...；已重新搜索，该渠道没有这个内存/型号` | 你表里的链接指向别的内存/型号，程序已重新搜索仍找不到：多半是表里的型号/内存写错了 |
 | `搜索结果里没有找到该型号/内存` | 站内搜索也没有这款 |
 | `无链接` | 这个款式没有任何链接，不检查 |
+
+「汇总(复制用)」列：有价格的渠道按 EURO / OleOle / MEX 顺序用斜杠连成一格，**相同价格只写一次**，例如 `300/400/566`、`799`；某渠道缺货或没找到就不写（EURO 200、OleOle 缺货、MEX 300 → `200/300`）。三个渠道都没有价格时：全部没链接写 `无链接`；有链接但缺货/下架/没找到型号/没价格写 `unavailable`；还没读到的写 `待续`。
 
 「对比RRP」列：`EURO -100 | OleOle +0 | MEX +50`（现价 − RRP）；全部等于 RRP 写 `= RRP`；表里没有 RRP 写 `无RRP`。
 
@@ -62,14 +64,15 @@ This is a standalone project.
 在竞品表里加/删行即可（下次运行自动并入）。`python app/tools/check_table.py` 会列出没有链接、没有 RRP、RRP 存疑的款式。没有链接的款式不会被检查；缺链接的可用 `add_link.py` 补，或让 AI agent 按 `AGENTS.md` / `skills/competitor-price-operator/SKILL.md` 代你搜索补齐。
 
 ## 7. 交给 AI agent
-Claude、Codex 等读 `AGENTS.md` 和 `skills/competitor-price-operator/SKILL.md` 就能代你：每周五运行、补漏、检查表格、补链接、解读结果。
+Claude Code、Codex 等会自动读取根目录的 `AGENTS.md`（skill 也放在 `.agents/skills/` 供自动发现）。它们就能代你：每周五运行、补漏、检查表格、补链接、解读结果。
 
 ## 8. 项目结构
 ```
 app/          run.py(入口) · check_competitors.py · competitors.py(纯逻辑) · browser.py(专用 Chrome/限速/拦截识别) · retail.py(EURO/OleOle 页面解析) · tools/
 config/       competitor_links.json 自动生成(已被 git 忽略)
 templates/    竞品表模板
-skills/       给 AI agent 的操作说明
+AGENTS.md     给 Codex / Claude Code 的入口说明
+skills/       给 AI agent 的操作说明(同一份在 .agents/skills/)
 docs/         ARCHITECTURE.md · TROUBLESHOOTING.md
 tests/        python tests/run_tests.py (离线自检)
 ```

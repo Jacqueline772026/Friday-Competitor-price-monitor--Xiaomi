@@ -68,6 +68,23 @@ def compare_text(rrp, prices):
     if all(abs(v) < 1 for v in d.values()): return "= RRP"
     return " | ".join(f"{k} {v:+d}" if v else f"{k} 0" for k, v in d.items())
 
+def _fmt_price(v):
+    return str(int(v)) if float(v).is_integer() else f"{v:.2f}".rstrip("0").rstrip(".")
+
+def summary_text(prices):
+    """复制用的汇总格: 有价格的渠道按 EURO/OleOle/MEX 顺序用 / 连起来，相同价格只写一次(799/799/799 -> 799)。
+    没有价格时: 全部无链接 -> 无链接；有链接但缺货/没找到型号/没价格 -> unavailable；还没读到(待续/失败/被拦截) -> 待续。"""
+    vals = [v for v in prices.values() if v not in (None, "")]
+    nums = []
+    for v in vals:
+        if isinstance(v, (int, float)) and v > 0 and v not in nums: nums.append(v)
+    if nums: return "/".join(_fmt_price(v) for v in nums)
+    texts = [str(v) for v in vals]
+    if not texts: return ""
+    if all(t == "无链接" for t in texts): return "无链接"
+    if any(t in ("待续", "被网站拦截") or t.startswith("读取失败") for t in texts): return "待续"
+    return "unavailable"
+
 def read_table(path, sheet=None, euro_col="E", oleole_col=None, mex_col="F", skip=SKIP_BRANDS):
     """读竞品表 -> 条目列表。只读，不修改原表(xlsx / xlsm 都行)。"""
     wb = openpyxl.load_workbook(path, data_only=True, read_only=True)
@@ -137,13 +154,13 @@ class Book:
             it["_r"] = r
 
     def date_cols(self, label, sites=("EURO", "OleOle", "MEX")):
-        """找(或新建)这个日期的各列 -> {'EURO': 列号, 'OleOle': 列号, 'MEX': 列号, 'cmp': 列号}"""
+        """找(或新建)这个日期的各列 -> {'EURO': 列号, 'OleOle': 列号, 'MEX': 列号, 'cmp': 列号, 'sum': 列号}"""
         heads = {self.ws.cell(1, c).value: c for c in range(8, self.ws.max_column + 1)}
         out = {}
-        for k, h in [(x, f"{x} {label}") for x in sites] + [("cmp", f"对比RRP {label}")]:
+        for k, h in [(x, f"{x} {label}") for x in sites] + [("cmp", f"对比RRP {label}"), ("sum", f"汇总(复制用) {label}")]:
             if h not in heads:
                 c = max(self.ws.max_column, 7) + 1
-                self.ws.cell(1, c, h).font = Font(bold=True); self.ws.column_dimensions[openpyxl.utils.get_column_letter(c)].width = 14 if k != "cmp" else 22
+                self.ws.cell(1, c, h).font = Font(bold=True); self.ws.column_dimensions[openpyxl.utils.get_column_letter(c)].width = 14 if k not in ("cmp", "sum") else 22
                 heads[h] = c
             out[k] = heads[h]
         return out

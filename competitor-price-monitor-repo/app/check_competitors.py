@@ -4,6 +4,7 @@
         [--mex-col F] [--rows 2-30] [--resume] [--sites EURO,OleOle,MEX] [--max-pages EURO=50,OleOle=40,MEX=40] [--date 2026-10-30]
 链接来源(优先级): 你表里的链接 > config/competitor_links.json(上次自动找到并核对过的) > OleOle 用 EURO 同名链接推导 > 站内搜索。
 每个网站每次运行有页数上限(默认 EURO 50 / OleOle 40)，到上限的格子写"待续"，几小时后用 --resume 继续，避免被拦截。"""
+from openpyxl.styles import Alignment
 import argparse, datetime as dt, pathlib, re, sys, time
 from urllib.parse import quote
 import competitors as C
@@ -135,6 +136,7 @@ def main():
                     if txt != "无链接" and txt != "待续": print(f"行{it['row']} {site:6} {txt}")
                 prices = {s: book.get(r, cols[s]) for s in sites}
                 book.put(r, cols["cmp"], C.compare_text(it["rrp"], prices))
+                sc = book.ws.cell(r, cols["sum"], C.summary_text(prices)); sc.alignment = Alignment(horizontal="left")
                 book.save()
         finally: page.close()
     book.sync(items, cache); book.save()          # 把这次自动找到的链接也写回结果表的链接列

@@ -11,3 +11,5 @@
 - **Media Expert 搜到的全是配件**：Media Expert 没有这款手机，写"搜索结果里没有找到"是对的。Media Expert 搜索页没有结构化列表，程序从商品链接里还原名称。
 - **竞品表里有些单元格是 `0`、`EURO`、`MEDIA EXPERT` 之类的占位文字**：不是链接，会被忽略。
 - **Windows**：使用 `.bat`；若 `py` 找不到，安装 Python 并勾选 "Add to PATH"。
+- **型号名要和网站一致**：例如 Realme 只有 Note 70T，表里写 Note 70 会一直报"链接商品与表不符"，改成 Note 70T 即可。
+- **同一款在不同网站内存版本不同**：例如 Samsung A26 5G，EURO 有 6/128 和 8/256，Media Expert 只有 8/128。分别按网站实际有的版本建行，没有的渠道留空。

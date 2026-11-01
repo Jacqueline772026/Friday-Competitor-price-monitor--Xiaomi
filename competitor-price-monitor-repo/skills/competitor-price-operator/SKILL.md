@@ -7,6 +7,11 @@ description: 运行竞品价格周监控(EURO/OleOle/Media Expert 现价 vs RRP)
 
 项目根目录 = 含 `app/run.py` 的文件夹。命令从根目录运行，Python 用 `.venv`(Mac: `.venv/bin/python`，Windows: `.venv\Scripts\python`)。
 
+## 0. 环境
+- 安装：`setup.command`(Mac) / `setup.bat`(Windows)，需要 Python 3.9+ 和本机 Chrome/Edge。
+- 有沙箱的 agent(Codex 等)：启动 Chrome、访问 `localhost:9222` 和零售网站需要用户放行；放行不了就让用户双击 `run_full` / `resume`，不要绕过。
+- 列出结果时按每个日期 5 列：EURO / OleOle / MEX / 对比RRP / 汇总(复制用)；汇总格里相同价格只写一次。
+
 ## 硬规则
 - 不绕过验证码/反爬；遇到 captcha、Lockdown、Lock、Blokada → 停止该网站，写进汇报，不要重试轰炸。
 - 每页间隔 ≥8 秒；不要调高每站页数上限(EURO 50 / OleOle 40 / MEX 40)。
