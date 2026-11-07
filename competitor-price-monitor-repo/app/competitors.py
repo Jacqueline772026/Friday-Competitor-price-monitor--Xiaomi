@@ -13,7 +13,8 @@ SKIP_BRANDS = {"xiaomi", "redmi", "redmi note", "poco", "pad"}      # 自己的�
 STOP = {"smartfon", "smartphone", "tablet", "galaxy", "moto", "motorola", "samsung", "realme", "honor", "lenovo",
         "xiaomi", "lte", "5g", "4g", "wifi", "wi", "fi", "wi-fi", "tab"}
 GREEN, RED = PatternFill("solid", fgColor="E2F0D9"), PatternFill("solid", fgColor="F8D7DA")
-DONE_TEXT = ("unavailable", "unavailable online", "discontinued", "无链接")           # 这些结果 resume 时不再重查
+NOLIST_TEXT, SKIP_TEXT, RECHECK_DAYS = "无此型号(已确认)", "不查", 28
+DONE_TEXT = ("unavailable", "unavailable online", "discontinued", "无链接", NOLIST_TEXT, SKIP_TEXT)   # 这些结果 resume 时不再重查
 
 def norm_mem(s):
     """'8+256' / '8/256GB' / '12+1T' / '4+128G' -> (8, 256)；识别不出返回 None"""
@@ -81,7 +82,7 @@ def summary_text(prices):
     if nums: return "/".join(_fmt_price(v) for v in nums)
     texts = [str(v) for v in vals]
     if not texts: return ""
-    if all(t == "无链接" for t in texts): return "无链接"
+    if all(t in ("无链接", SKIP_TEXT) for t in texts): return SKIP_TEXT if SKIP_TEXT in texts else "无链接"
     if any(t in ("待续", "被网站拦截") or t.startswith("读取失败") for t in texts): return "待续"
     return "unavailable"
 
@@ -90,7 +91,8 @@ def read_table(path, sheet=None, euro_col="E", oleole_col=None, mex_col="F", ski
     wb = openpyxl.load_workbook(path, data_only=True, read_only=True)
     names = wb.sheetnames
     name = sheet or next((n for n in names if "竞品" in n or "competitor" in n.lower()), names[0])
-    ws = wb[name]; idx = lambda c: openpyxl.utils.column_index_from_string(c) - 1
+    ws = wb[name]; ws.reset_dimensions()   # 有些表头尺寸信息不对，读不全
+    idx = lambda c: openpyxl.utils.column_index_from_string(c) - 1
     ec, oc, mc = idx(euro_col), (idx(oleole_col) if oleole_col else None), (idx(mex_col) if mex_col else None)
     url = lambda v: str(v).strip() if isinstance(v, str) and v.strip().startswith("http") else None
     items = []
@@ -103,6 +105,13 @@ def read_table(path, sheet=None, euro_col="E", oleole_col=None, mex_col="F", ski
                       "euro": url(row[ec]), "oleole": url(row[oc]) if oc is not None else None, "mex": url(row[mc]) if mc is not None else None,
                       "key": f"{brand}|{product}|{spec}"})
     wb.close(); return items, name
+
+def status_fresh(entry, link, today):
+    """状态记录(确认没有该型号 / 已下架)是否还有效: 28 天内、且表里的链接没被改过。过期或链接变了就重新查。"""
+    if not entry: return False
+    try: age = (today - __import__("datetime").date.fromisoformat(entry["date"])).days
+    except Exception: return False
+    return 0 <= age < RECHECK_DAYS and (entry.get("link") or "") == (link or "")
 
 def mex_items(html):
     """Media Expert 搜索结果页没有结构化列表，从商品链接里还原 (名称, 链接, None)。链接名里的 8-256gb 还原成 8/256GB 以便核对内存。"""

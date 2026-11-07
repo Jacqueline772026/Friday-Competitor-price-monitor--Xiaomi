@@ -36,8 +36,10 @@ def start_chrome(settle=30):
         time.sleep(2)
     print("专用 Chrome 没有在 60 秒内准备好。"); return False
 
+DELAY = (8.0, 14.0)   # 页间隔(秒)；竞品周检在 check_competitors.main() 里放慢到 15–25
+
 def fetch(page, url):
-    """打开一个页面并返回 HTML。每页间隔 8–14 秒；超时重试一次；识别拦截页(Lockdown / Lock / Blokada / 被送回首页)并抛 Blocked。"""
+    """打开一个页面并返回 HTML。每页间隔见 DELAY；超时重试一次；识别拦截页(Lockdown / Lock / Blokada / 被送回首页)并抛 Blocked。"""
     for attempt in (1, 2):
         try: page.goto(url, wait_until="domcontentloaded", timeout=60000); break
         except Exception as ex:
@@ -47,5 +49,5 @@ def fetch(page, url):
     html = page.content()
     if "Access Denied" in html[:3000] or re.search(r"<title>[^<]*(lockdown|access denied|forbidden|\block\b|blokad)", html[:6000], re.I): raise Blocked(url)
     if urlparse(page.url).path in ("", "/") and urlparse(url).path not in ("", "/"): raise Blocked("被重定向回首页: " + url)   # 软拦截
-    time.sleep(random.uniform(8.0, 14.0))
+    time.sleep(random.uniform(*DELAY))
     return html

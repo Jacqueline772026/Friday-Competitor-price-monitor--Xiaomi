@@ -15,6 +15,7 @@ import paths
 import browser as R
 
 OUT_DEFAULT, CACHE_P, TABLE_DEFAULT = paths.LOG_XLSX, paths.CACHE, paths.find_table()
+STATUS_P = CACHE_P.with_name("competitor_status.json")   # 记住"确认没有该型号/已下架/不查"，下次不再浪费页数
 SITES = R.SITES
 
 class Budget(Exception): pass
@@ -51,7 +52,8 @@ def lookup(page, site, it, cache, fetch):
     cands = [u for n, u, _ in items if C.verify(n, it["brand"], it["product"], it["spec"], True)[0] and C.norm_mem(n)]
     if not cands:
         if not items and len(html) < 30000 and site != "MEX": raise R.Blocked("搜索页只有很小的页面(疑似拦截页): " + surl)
-        return ("text", f"{mismatch}；已重新搜索，该渠道没有这个内存/型号" if mismatch else f"搜索结果里没有找到该型号/内存 [共{len(items)}个结果]")
+        confirmed = bool(items) or len(html) >= 30000            # 搜索页正常打开且确实没有该款 -> 记住，不再重复搜
+        return ("text", f"{mismatch}；已重新搜索，该渠道没有这个内存/型号" if mismatch else f"搜索结果里没有找到该型号/内存 [共{len(items)}个结果]", confirmed)
     new = cands[0] if cands[0].startswith("http") else origin.rstrip("/") + cands[0]
     html = fetch(site, new); info = retail.product_info(html)
     if not info: return ("text", mismatch or "页面无价格数据")
@@ -72,24 +74,31 @@ def finish(site, it, cache, url, html, info, remember):
     return ("price", price, st, url)
 
 def main():
+    R.DELAY = (15.0, 25.0)   # 竞品周检放慢，降低被拦概率
     if hasattr(sys.stdout, "reconfigure"): sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser(); ap.add_argument("table", nargs="?", default=str(TABLE_DEFAULT)); ap.add_argument("--sheet"); ap.add_argument("--euro-col", default="E")
-    ap.add_argument("--oleole-col"); ap.add_argument("--mex-col", default="F"); ap.add_argument("--rows"); ap.add_argument("--resume", action="store_true"); ap.add_argument("--sites", default="EURO,OleOle,MEX")
+    ap.add_argument("--oleole-col"); ap.add_argument("--mex-col", default="F"); ap.add_argument("--rows"); ap.add_argument("--resume", action="store_true"); ap.add_argument("--overwrite", action="store_true"); ap.add_argument("--sites", default="EURO,OleOle,MEX")
     ap.add_argument("--max-pages", default="EURO=50,OleOle=40,MEX=40"); ap.add_argument("--date"); ap.add_argument("--out", default=str(OUT_DEFAULT)); a = ap.parse_args()
     table, out = pathlib.Path(a.table), pathlib.Path(a.out)
     if not table.exists(): sys.exit(f"找不到竞品表 {table}。请把竞品价格表放到项目文件夹(或用参数指定路径)。")
     if (out.parent / f"~${out.name}").exists(): sys.exit(f"{out.name} 正在被 Excel 打开。请先关闭 Excel(提示保存时选\"不保存\")，再重新运行。")
     day = dt.date.fromisoformat(a.date) if a.date else dt.date.today(); label = day.strftime("%Y.%m.%d")
-    if day.weekday() != 4: print(f"提示: {label} 不是周五(周五才是正式的每周检查)，照常运行。")
+    if not a.date and day.weekday() in (2, 3): day = day + dt.timedelta(days=4 - day.weekday()); label = day.strftime("%Y.%m.%d"); print(f"提示: 今天是周三/周四，提前开跑，结果按本周五的日期 {label} 记录(补漏同样记在这一列)。")
+    if day.weekday() != 4 and not (not a.date and dt.date.today().weekday() in (2, 3)): print(f"提示: {label} 不是周五(周五才是正式的每周检查)，照常运行。")
     sites = [s for s in a.sites.split(",") if s in SITES]
     budget = {k: int(v) for k, v in (x.split("=") for x in a.max_pages.split(","))}
     items, sname = C.read_table(table, a.sheet, a.euro_col, a.oleole_col, a.mex_col)
     if a.rows:
         lo, hi = (int(x) for x in a.rows.split("-")) if "-" in a.rows else (int(a.rows),) * 2
         items = [i for i in items if lo <= i["row"] <= hi]
-    cache = C.load_cache(CACHE_P); book = C.Book(out); book.sync(items, cache); cols = book.date_cols(label, tuple(sites))
+    cache = C.load_cache(CACHE_P); status = C.load_cache(STATUS_P); book = C.Book(out); book.sync(items, cache); cols = book.date_cols(label, tuple(sites))
     print(f"竞品表: {table.name} [{sname}] 共 {len(items)} 款 | 检查日期 {label} | 结果: {out.name}")
+    if not a.resume and not a.overwrite and any(book.get(it["_r"], cols[s]) not in (None, "") for it in items for s in sites):
+        sys.exit(f"[{label}] 这一列已经有结果了。要接着补没读到的，请用「竞品补漏」(resume)；确实要整列重来才加 --overwrite。(防止把已读到的价格覆盖掉)")
     used = {s: 0 for s in SITES}; streak = {s: 0 for s in SITES}; stopped = {}; stat = {}
+    own_link = lambda it, site: {"EURO": it["euro"], "OleOle": it["oleole"], "MEX": it.get("mex")}[site] or ""
+    def remember(it, site, state, url=None):
+        status.setdefault(it["key"], {})[site] = {"state": state, "date": str(day), "link": own_link(it, site)}; C.save_cache(STATUS_P, status)
     def fetch(site, url):
         if used[site] >= budget.get(site, 999): raise Budget(site)
         used[site] += 1
@@ -107,7 +116,10 @@ def main():
                 for site in sites:
                     c = cols[site]; cur = book.get(r, c)
                     if a.resume and cur not in (None, "") and ((isinstance(cur, (int, float)) and cur > 0) or str(cur) in C.DONE_TEXT): continue
-                    if not (it["euro"] or it["oleole"] or it.get("mex") or cache.get(it["key"])): txt = "无链接"; num = None       # 表里一个链接都没有的款式不去搜索
+                    stt = status.get(it["key"], {})
+                    if stt.get("*", {}).get("state") == "skip": txt = C.SKIP_TEXT; num = None                      # 用户/agent 标了"不查"(停售老款)
+                    elif C.status_fresh(stt.get(site), own_link(it, site), day): txt = "discontinued" if stt[site]["state"] == "discontinued" else C.NOLIST_TEXT; num = None   # 28 天内确认过，不再读页面
+                    elif not (it["euro"] or it["oleole"] or it.get("mex") or cache.get(it["key"])): txt = "无链接"; num = None       # 表里一个链接都没有的款式不去搜索
                     elif site in stopped: txt = "待续"; num = None
                     else:
                         num = None
@@ -116,10 +128,13 @@ def main():
                             if res[0] == "price":
                                 _, price, st, url = res
                                 if st in ("unavailable", "unavailable online", "discontinued"): txt = st; note = f"页面价格 {price}" if price else None
+                                if st == "discontinued": remember(it, site, "discontinued")
                                 elif st == "no_price": txt, note = "页面无价格数据", None
                                 else: txt, num, note = price, price, None
                                 if txt is None: txt = "页面无价格数据"
-                            else: txt, note = res[1], None
+                            else:
+                                txt, note = res[1], None
+                                if len(res) > 2 and res[2]: note, txt = txt, C.NOLIST_TEXT; remember(it, site, "no_listing")   # 原因放批注，格子写"无此型号(已确认)"
                         except Budget:
                             stopped[site] = "页数上限"; txt, note = "待续", None
                             print(f"-- {site} 本次已读 {used[site]} 页，到达上限，剩下的标\"待续\"。请过几个小时用 resume 继续。")
@@ -133,7 +148,7 @@ def main():
                         book.put(r, c, txt, it["rrp"] if isinstance(txt, (int, float)) else None, note)
                         stat.setdefault(site, []).append(txt); print(f"行{it['row']} {site:6} {it['brand']} {it['product']} {it['spec']}: {txt}" + (f"  (RRP {it['rrp']:g})" if isinstance(txt, (int, float)) and it["rrp"] else "")); continue
                     book.put(r, c, txt); stat.setdefault(site, []).append(txt)
-                    if txt != "无链接" and txt != "待续": print(f"行{it['row']} {site:6} {txt}")
+                    if txt not in ("无链接", "待续", C.SKIP_TEXT): print(f"行{it['row']} {site:6} {txt}")
                 prices = {s: book.get(r, cols[s]) for s in sites}
                 book.put(r, cols["cmp"], C.compare_text(it["rrp"], prices))
                 sc = book.ws.cell(r, cols["sum"], C.summary_text(prices)); sc.alignment = Alignment(horizontal="left")

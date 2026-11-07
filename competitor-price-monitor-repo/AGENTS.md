@@ -29,3 +29,6 @@ This is a standalone weekly competitor price monitor. Full procedure: [`skills/c
 - 结果列：每个日期 5 列 —— `EURO <日期>`、`OleOle <日期>`、`MEX <日期>`、`对比RRP <日期>`、`汇总(复制用) <日期>`（有价格的渠道用 `/` 连接，相同价格只写一次；没价格写 `无链接` / `unavailable` / `待续`）。
 - "链接商品与表不符 / 搜索结果里没有找到"：按 SKILL 第 3 节自查，确认网站上确实没有就如实汇报"表里型号/内存可能写错"，不要硬配链接。
 - 改动代码后必须跑 `python tests/run_tests.py`；改了 SKILL 要同步 `.agents/skills/` 那份。
+- 缺 RRP 的型号：到 https://m.gsmarena.com/ 搜(多为 EUR/USD 参考价，不是 PLN RRP；写明来源，标"?"，不要猜)。缺 EURO / Media Expert 链接：自己触发站内搜索并核对型号+内存后用 `add_link.py` 写入，不用等用户提醒(详见 SKILL 第 3b 节)。
+- 竞品表以用户每周给的新模板为准(表在其中一个 sheet、可能没有表头)：用 `--sheet` 指定；程序读表时不会改原文件。RRP 暂时留空的款式不要猜，结果里只记录网页价格，RRP 由用户之后确认。
+- 页数有限：确认没有/下架的格子 28 天内不重复搜(`config/competitor_status.json`，不要提交)；停售老款用 `python app/tools/mark.py ... skip` 标"不查"(见 SKILL 3c)。

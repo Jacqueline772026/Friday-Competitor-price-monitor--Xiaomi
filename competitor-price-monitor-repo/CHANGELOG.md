@@ -1,4 +1,12 @@
 # Changelog
+## v1.4 (2026-11-07)
+- 周四提前开跑：不带 --date 时，周四运行的结果自动记在周五的日期列(补漏同列)。
+- 省页数：站内搜索确认没有该型号/内存、页面写明下架的格子记进 `competitor_status.json`，28 天内不再重复搜(结果写 `无此型号(已确认)` / `discontinued`)。
+- 新增 `app/tools/mark.py`：把停售老款标成 `不查`。resume 把这些文字当作已完成。
+## v1.3 (2026-11-07)
+- 读表时重置 sheet 尺寸信息(新模板尺寸信息错误会导致读不到行)。
+- 竞品周检页间隔放慢到 15–25 秒(`browser.DELAY`)。
+- SKILL 第 3b 节 / AGENTS：缺 RRP 去 m.gsmarena.com 查(仅作参考价)；缺链接由 agent 自动触发搜索并核对。
 ## v1.2 (2026-10-31)
 - Codex / 通用 agent 适配：重写 `AGENTS.md`（环境、命令表、沙箱提示、规矩）；skill 同步放到 `.agents/skills/`；测试检查两份一致。
 - 示例/说明：型号名要和零售网站一致（例如 Realme 只有 Note 70T，写成 Note 70 会被报"链接商品与表不符"）。

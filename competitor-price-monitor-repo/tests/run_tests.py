@@ -85,6 +85,15 @@ eq(C.summary_text({"EURO": 799, "OleOle": 799, "MEX": 799}), "799")
 eq(C.summary_text({"EURO": 799, "OleOle": 799.0, "MEX": 849}), "799/849")
 eq(C.summary_text({"EURO": "链接商品与表不符: x", "OleOle": "discontinued", "MEX": "unavailable online"}), "unavailable")
 eq(C.summary_text({"EURO": "unavailable", "OleOle": "待续", "MEX": "无链接"}), "待续")
+import datetime as _dt
+eq(C.summary_text({"EURO": "不查", "OleOle": "不查", "MEX": "不查"}), "不查")
+eq(C.summary_text({"EURO": C.NOLIST_TEXT, "OleOle": "无链接", "MEX": C.NOLIST_TEXT}), "unavailable")
+_t = _dt.date(2026, 11, 7)
+eq(C.status_fresh({"state": "no_listing", "date": "2026-11-07", "link": ""}, "", _t), True)
+eq(C.status_fresh({"state": "no_listing", "date": "2026-10-01", "link": ""}, "", _t), False)      # 超过 28 天重查
+eq(C.status_fresh({"state": "no_listing", "date": "2026-11-07", "link": "a"}, "b", _t), False)    # 表里链接改了就重查
+eq(C.status_fresh(None, "", _t), False)
+eq(all(t in C.DONE_TEXT for t in (C.NOLIST_TEXT, C.SKIP_TEXT)), True)
 import pathlib as _pl
 _root = _pl.Path(__file__).resolve().parent.parent
 eq((_root / "skills/competitor-price-operator/SKILL.md").read_text(encoding="utf-8"), (_root / ".agents/skills/competitor-price-operator/SKILL.md").read_text(encoding="utf-8"))
