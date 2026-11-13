@@ -124,3 +124,10 @@ def listing_items(html):
                     o = o[0] if isinstance(o, list) and o else o
                     if it.get("name") and it.get("url"): out.append((it["name"], it["url"], o.get("price")))
     return out
+
+
+OUTLET_WORDS = ("outlet", "regenerowan", "refurbished", "poekspozycyj", "ekspozycj", "po zwrocie", "uszkodzon", "używan", "uzywan", "pre-owned", "ex-display", "open box", "otwarte opakowanie")
+def is_outlet(*texts):
+    """商品名/链接里带 Outlet、翻新、展示机、拆封退货、二手 等字样 -> True。这类商品不计入价格(所有渠道一致)。"""
+    t = " ".join(str(x or "") for x in texts).lower().replace("-", " ").replace("_", " ")
+    return any(w in t for w in OUTLET_WORDS)

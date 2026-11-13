@@ -37,7 +37,10 @@ r = K.lookup(None, "EURO", it, cache, fetch); eq(r[:3], ("price", 539.0, "availa
 prod = "https://www.oleole.pl/telefony-komorkowe/samsung-a16-oleole.bhtml"
 pages["https://www.oleole.pl/search2.bhtml?keyword=Samsung%20A16%205G"] = listing([("Samsung Galaxy A16 5G 4/128GB", prod), ("Samsung Galaxy A16 5G 4/128GB LTE x", prod + "2")])
 pages[prod] = page("Samsung Galaxy A16 5G 4/128GB", 549.0)
+eq(K.lookup(None, "OleOle", dict(it, oleole=None), {}, fetch), ("text", "无链接"))       # 默认: 没有链接且推不出来 -> 不搜索，记无链接
+K.SEARCH_MISSING = True
 r = K.lookup(None, "OleOle", it, cache, fetch); eq(r[:3], ("price", 549.0, "available")); eq(cache[it["key"]]["OleOle"], prod)
+K.SEARCH_MISSING = False
 # 你自己配的链接内存对不上 -> 如实报告
 it2 = dict(it, key="Samsung|A26 5G|8+128", product="A26 5G", spec="8+128"); pages["https://www.euro.com.pl/telefony-komorkowe/samsung-a16.bhtml"] = page("Samsung Galaxy A26 5G 6/128GB", 999.0)
 # 链接内存对不上 -> 自动重新搜索；搜到正确的就更新并记住，搜不到才如实报告
@@ -94,6 +97,7 @@ eq(C.status_fresh({"state": "no_listing", "date": "2026-10-01", "link": ""}, "",
 eq(C.status_fresh({"state": "no_listing", "date": "2026-11-07", "link": "a"}, "b", _t), False)    # 表里链接改了就重查
 eq(C.status_fresh(None, "", _t), False)
 eq(all(t in C.DONE_TEXT for t in (C.NOLIST_TEXT, C.SKIP_TEXT)), True)
+eq(C.verify('Tablet Samsung Galaxy Tab S10 FE SM-X520 10,9" 8/128GB WiFi', "Samsung", "S10 FE", "8+128", True)[0], True)   # 型号代码 SM-X520 不影响核对
 import pathlib as _pl
 _root = _pl.Path(__file__).resolve().parent.parent
 eq((_root / "skills/competitor-price-operator/SKILL.md").read_text(encoding="utf-8"), (_root / ".agents/skills/competitor-price-operator/SKILL.md").read_text(encoding="utf-8"))

@@ -32,3 +32,5 @@ This is a standalone weekly competitor price monitor. Full procedure: [`skills/c
 - 缺 RRP 的型号：到 https://m.gsmarena.com/ 搜(多为 EUR/USD 参考价，不是 PLN RRP；写明来源，标"?"，不要猜)。缺 EURO / Media Expert 链接：自己触发站内搜索并核对型号+内存后用 `add_link.py` 写入，不用等用户提醒(详见 SKILL 第 3b 节)。
 - 竞品表以用户每周给的新模板为准(表在其中一个 sheet、可能没有表头)：用 `--sheet` 指定；程序读表时不会改原文件。RRP 暂时留空的款式不要猜，结果里只记录网页价格，RRP 由用户之后确认。
 - 页数有限：确认没有/下架的格子 28 天内不重复搜(`config/competitor_status.json`，不要提交)；停售老款用 `python app/tools/mark.py ... skip` 标"不查"(见 SKILL 3c)。
+- 不计 Outlet/翻新/展示机/二手商品(见 SKILL 3d)，补链接时别用这类页面。
+- 查不到/有问题的型号：先用 GfK 判断销量和渠道，再建议追踪或不追踪，并给用户对领导的话术(见 SKILL 3e)；不要凭印象标"不查"。

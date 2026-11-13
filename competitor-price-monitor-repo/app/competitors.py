@@ -43,7 +43,7 @@ def model_key(s, brand=""):
     if m: s = s[:m.start()]
     s = re.sub(r"\d+(?:[.,]\d+)?\s*[\"″”]", " ", s).replace(",", ".")
     skip = set(str(brand).lower().split())
-    return "".join(t for t in re.findall(r"[a-z0-9.\-]+", s) if t not in STOP and t not in skip).replace("-", "").replace(".", "")
+    return "".join(t for t in re.findall(r"[a-z0-9.\-]+", s) if t not in STOP and t not in skip and not re.fullmatch(r"sm-?[a-z]\d{3,4}[a-z]?", t)).replace("-", "").replace(".", "")   # 三星型号代码(SM-X520 等)不参与比较
 
 def verify(page_name, brand, product, spec, strict):
     """-> (是否一致, 说明)。宽松(你自己配的链接): 只核对内存；严格(自动找到/推导的链接): 内存 + 型号词必须完全一致"""
